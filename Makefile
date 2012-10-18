@@ -1,8 +1,8 @@
-UnixShell: UnixShell.o
-	gcc -o ./bin/UnixShell.exe UnixShell.o
+life: life.o
+	gcc -o ./bin/life.exe life.o
 
-UnixShell.o: UnixShell.c UnixShell.h
-	gcc -c -Wall UnixShell.c
+life.o: life.c life.h
+	gcc -c -Wall life.c
 
 clean:
 	rm *.o

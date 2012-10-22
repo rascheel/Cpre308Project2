@@ -2,7 +2,7 @@ life: life.o
 	gcc -o ./bin/life.exe life.o
 
 life.o: life.c life.h
-	gcc -c -Wall life.c
+	gcc -c life.c
 
 clean:
 	rm *.o

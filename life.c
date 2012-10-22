@@ -6,7 +6,8 @@
 #include "life.h"
 
 
-
+char ** currGrid;
+char ** nextGrid; 
 
 
 int main(int argc, char ** argv)
@@ -19,8 +20,8 @@ int main(int argc, char ** argv)
 	printf("input = %s\n", arguments.input);
 	printf("output = %s\n\n", arguments.output);
 
-	char ** inputArray = malloc(arguments.gridSize*sizeof(char*));
-	if(inputArray == NULL)
+	currGrid = malloc(arguments.gridSize*sizeof(char*));
+	if(currGrid == NULL)
 	{
 		printf("Not enough memory!");
 		abort();
@@ -28,43 +29,168 @@ int main(int argc, char ** argv)
 	int i;
 	for(i = 0; i < arguments.gridSize; i++)
 	{
-		inputArray[i] = malloc(arguments.gridSize*sizeof(char));
-		printf("mallocing inputArray[%i] at : %x\n", i, inputArray[i]);
-		if(inputArray[i] == NULL)
+		currGrid[i] = malloc(arguments.gridSize*sizeof(char));
+		if(currGrid[i] == NULL)
 		{
 			printf("Not enough memory!");
 			abort();
 		}
 	}
-	
-	for(i = 0; i < 8; i++)
+	readInputFile(&arguments, currGrid);
+
+	nextGrid = malloc(arguments.gridSize*sizeof(char*));
+	if(nextGrid == NULL)
 	{
-		printf("inputArray[%i] at : %x\n", i, inputArray[i]);
+		printf("Not enough memory");
+		abort();
+	}
+	for(i = 0; i < arguments.gridSize; i++)
+	{
+		nextGrid[i] = malloc(arguments.gridSize*sizeof(char));
+		if(nextGrid[i] = NULL)
+		{
+			printf("Not enough memory!");
+			abort();
+		}
 	}
 
-	free(inputArray[7]);
-	inputArray[7] = (char*)malloc(sizeof(char)*arguments.gridSize);
-	printf("%x\twtf?",&inputArray[7][0]);
-	inputArray[7][0] = 2;
-	//Sanity check?
-
-	readInputFile(&arguments, inputArray);
-
-	printGrid(&arguments, inputArray);
 	
+
+	printGrid(&arguments, currGrid);
+
+
+
+/*
+	printf("nextCell[%i][%i] = %c\n", 0, 0, nextCell(&arguments, 0, 0));
+	printf("nextCell[%i][%i] = %c\n", 7, 0, nextCell(&arguments, 7, 0));
+	printf("nextCell[%i][%i] = %c\n", 0, 7, nextCell(&arguments, 0, 7));
+	printf("nextCell[%i][%i] = %c\n", 7, 7, nextCell(&arguments, 7, 7));
+	printf("nextCell[%i][%i] = %c\n", 0, 1, nextCell(&arguments, 0, 1));
+	printf("nextCell[%i][%i] = %c\n", 7, 1, nextCell(&arguments, 7, 1));
+	printf("nextCell[%i][%i] = %c\n", 1, 0, nextCell(&arguments, 1, 0));
+	printf("nextCell[%i][%i] = %c\n", 1, 7, nextCell(&arguments, 1, 7));
+	printf("nextCell[%i][%i] = %c\n", 1, 1, nextCell(&arguments, 1, 1));
+	printf("nextCell[%i][%i] = %c\n", 2, 5, nextCell(&arguments, 2, 5));
+*/	
 
 
 	return 0;
 }
 
+char nextCell(struct argsStruct * args, int row, int col)
+{
+
+	int numOfNeighbors = 0;
+	if(row != 0 && row != args->gridSize-1)
+	{
+		if(col != 0 && col != args->gridSize-1)//Normal tile with 8 neighbors
+		{
+			if(currGrid[row-1][col-1] == '1') numOfNeighbors++;
+			if(currGrid[row-1][col] == '1') numOfNeighbors++;
+			if(currGrid[row-1][col+1] == '1') numOfNeighbors++;
+			if(currGrid[row][col-1] == '1') numOfNeighbors++;
+			if(currGrid[row][col+1] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col-1] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col+1] == '1') numOfNeighbors++;
+		}
+		else if(col == 0)//tile on left border of grid
+		{
+			if(currGrid[row-1][col] == '1') numOfNeighbors++;
+			if(currGrid[row-1][col+1] == '1') numOfNeighbors++;
+			if(currGrid[row][col+1] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col+1] == '1') numOfNeighbors++;
+		}
+		else if(col == args->gridSize-1)//tile on right border of grid
+		{
+			if(currGrid[row-1][col] == '1') numOfNeighbors++;
+			if(currGrid[row-1][col-1] == '1') numOfNeighbors++;
+			if(currGrid[row][col-1] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col-1] == '1') numOfNeighbors++;
+		}
+	}
+	else if(col != 0 && col != args->gridSize-1)
+	{
+		if(row == 0)//tile on top border of grid
+		{
+			if(currGrid[row][col-1] == '1') numOfNeighbors++;
+			if(currGrid[row][col+1] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col-1] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col+1] == '1') numOfNeighbors++;
+		}
+		else if(row == args->gridSize-1)//tile on bottom border of grid
+		{
+			if(currGrid[row][col-1] == '1') numOfNeighbors++;
+			if(currGrid[row][col+1] == '1') numOfNeighbors++;
+			if(currGrid[row-1][col-1] == '1') numOfNeighbors++;
+			if(currGrid[row-1][col] == '1') numOfNeighbors++;
+			if(currGrid[row-1][col+1] == '1') numOfNeighbors++;
+		}
+	}
+	else//it's a corner
+	{
+		if(row == 0 && col == 0)//top left corner
+		{
+			if(currGrid[row][col+1] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col+1] == '1') numOfNeighbors++;
+		}
+		else if(row == args->gridSize-1 && col == args->gridSize-1)//bottom right corner
+		{
+			if(currGrid[row][col-1] == '1') numOfNeighbors++;
+			if(currGrid[row-1][col] == '1') numOfNeighbors++;
+			if(currGrid[row-1][col-1] == '1') numOfNeighbors++;
+		}
+		else if(row == args->gridSize-1) //bottom left corner
+		{
+			if(currGrid[row][col+1] == '1') numOfNeighbors++;
+			if(currGrid[row-1][col] == '1') numOfNeighbors++;
+			if(currGrid[row-1][col+1] == '1') numOfNeighbors++;
+		}
+		else //top right corner
+		{
+			if(currGrid[row][col-1] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col] == '1') numOfNeighbors++;
+			if(currGrid[row+1][col-1] == '1') numOfNeighbors++;
+		}
+	}
+
+
+	if(currGrid[row][col] == '0')
+	{
+		if(numOfNeighbors == 3)
+		{
+			return '1';
+		}
+		else
+		{
+			return '0';
+		}
+	}
+	else
+	{
+		if(numOfNeighbors <= 1)
+		{
+			return '0'; //die due to loneliness
+		}
+		else if(numOfNeighbors >= 4)
+		{
+			return '0'; //die due to overcrowding
+		}
+		else
+		{
+			return '1'; //Cell survives... for now
+		}
+	}
+}
+
 void readInputFile(struct argsStruct * args, char ** inputArray)
 {
-	char * inputLine;
+	char * inputLine = (char *)malloc(args->gridSize*2*sizeof(char)+1);//needs the +1 because fgets Null terminates.
 	int i, j;
-	for(i = 0; i < 8; i++)
-	{
-		printf("inputArray[%i] at : %x\n", i, inputArray[i]);
-	}
 	for(i = 0; i < args->gridSize; i++)
 	{
 		if(fgets(inputLine, args->gridSize*2+1, args->input) == NULL)
@@ -74,15 +200,9 @@ void readInputFile(struct argsStruct * args, char ** inputArray)
 		}
 		for(j = 0; j < args->gridSize*2; j+=2)
 		{
-				//printf("readInputFile: i=%i   j=%i\n", i, j);
-				printf("&inputArray[%i][%i] = %x\n", i, j/2, &(inputArray[i][j/2]));
 				if(inputLine[j] == '0' || inputLine[j] == '1')
 				{
-					//printf("here\n");
-					//fflush(stdout);
 					inputArray[i][j/2] = inputLine[j];
-					//printf("here\n");
-					//fflush(stdout);
 				}
 				else
 				{
@@ -105,13 +225,12 @@ void printGrid(struct argsStruct * args, char ** arrayToPrint)
 		{
 			if(j != (args->gridSize - 1))
 			{
-				fprintf("%c%c", arrayToPrint[i][j], " ");
+				fprintf(args->output, "%c ", arrayToPrint[i][j]);
 			}
 			else
 			{
-				fprintf("%c%c", arrayToPrint[i][j], "\n");
+				fprintf(args->output, "%c\n", arrayToPrint[i][j]);
 			}
-			printf("printGrid: i=%i   j=%i\n", i, j);
 		}
 	}
 }

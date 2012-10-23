@@ -8,12 +8,15 @@
 
 char ** currGrid;
 char ** nextGrid; 
-
+pthread_mutex_t cellMutes;
+int cellsLeft;
 
 int main(int argc, char ** argv)
 {
 	struct argsStruct arguments = processArgs(argc, argv);
-	
+	pthread_t * threads;
+
+
 	printf("grid size = %i\n", arguments.gridSize);
 	printf("threads = %i\n", arguments.numThreads);
 	printf("generations = %i\n", arguments.numGenerations);
@@ -47,14 +50,39 @@ int main(int argc, char ** argv)
 	for(i = 0; i < arguments.gridSize; i++)
 	{
 		nextGrid[i] = malloc(arguments.gridSize*sizeof(char));
-		if(nextGrid[i] = NULL)
+		if(nextGrid[i] == NULL)
 		{
 			printf("Not enough memory!");
 			abort();
 		}
 	}
 
-	
+    cellMutes = malloc(sizeof(pthread_mutex_t*)*arguments.gridSize);
+    if(cellMutes == NULL)
+    {
+        printf("Not enough memory");
+        abort();
+    }
+    for(i = 0; i < arguments.gridSize; i++)
+    {
+        cellMutes[i] = malloc(sizeof(pthread_mutex_t)*arguments.gridSize);
+        if(cellMutes[i] == NULL)
+        {
+            printf("Not enough memory");
+            abort();
+        }
+        pthread__mutex_init(&cellMutes[i], NULL);
+    }
+
+    threads = malloc(sizeof(pthread_t)*arguments.numThreads);
+    for(i = arguments.numThreads; i >= 0; i--)
+    {
+        struct threadArgs;
+        threadArgs.startRow = arguments.gridSize
+        pthread_create(
+	cellsLeft = arguments.gridSize*arguments.gridSize;
+
+
 
 	printGrid(&arguments, currGrid);
 

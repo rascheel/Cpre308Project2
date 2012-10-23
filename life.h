@@ -11,8 +11,18 @@ struct argsStruct
 	FILE* output;
 };
 
+struct threadArgs
+{
+    int gridSize;
+    int startRow;
+    int numOfRow;
+    int startCol;
+    int numOfCol;
+};
+
 struct argsStruct processArgs(int argc, char ** argv);
 
 void readInputFile(struct argsStruct * args, char ** inputArray);
 void printGrid(struct argsStruct * args, char ** arrayToPrint);
 char nextCell(struct argsStruct * args, int i, int j);
+void workerThread(void * arg);

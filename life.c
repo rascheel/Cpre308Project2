@@ -19,13 +19,13 @@ int main(int argc, char ** argv)
 	struct argsStruct arguments = processArgs(argc, argv);
 	pthread_t * threads;
 
-
+/*
 	printf("grid size = %i\n", arguments.gridSize);
 	printf("threads = %i\n", arguments.numThreads);
 	printf("generations = %i\n", arguments.numGenerations);
 	printf("input = %s\n", arguments.input);
 	printf("output = %s\n\n", arguments.output);
-
+*/
 	currGrid = malloc(arguments.gridSize*sizeof(char*));
 	if(currGrid == NULL)
 	{
@@ -50,6 +50,12 @@ int main(int argc, char ** argv)
 		abort();
 	}
 
+    if(arguments.numThreads > arguments.gridSize)
+    {
+        printf("Number of threads greater than grid size. Invalid configuration.");
+        abort();
+    }
+
 
 	nextGrid = malloc(arguments.gridSize*sizeof(char*));
 	if(nextGrid == NULL)
@@ -72,17 +78,42 @@ int main(int argc, char ** argv)
 	generationsDone = 0;
 	pthread_mutex_init(&mutex, NULL);
 	pthread_cond_init(&oneGenDone, NULL);
-    struct threadArgs * tArgs = malloc(sizeof(struct threadArgs)*arguments.numThreads);
-    threads = malloc(sizeof(pthread_t)*arguments.numThreads-1);
+    struct threadArgs * tArgs = malloc(sizeof(struct threadArgs)*(arguments.numThreads-1));
+    threads = malloc(sizeof(pthread_t)*(arguments.numThreads-1));
     for(i = 0; i < arguments.numThreads-1; i++)
     {
-		tArgs[i].gridSize = arguments.gridSize;
-		tArgs[i].numGenerations = arguments.numGenerations;
-        tArgs[i].startRow = i*(arguments.gridSize/(arguments.numThreads-1));
-		tArgs[i].numOfRow = arguments.gridSize/(arguments.numThreads-1);
-		printf("before Thread: startRow = %i, numOfRow = %i\n", tArgs[i].startRow, tArgs[i].numOfRow);
-		fflush(stdout);
-        pthread_create(&threads[i], NULL, (void *)&workerThread, &tArgs[i]);
+        //printf("%i, %i\n", arguments.numThreads-1,(arguments.numThreads-1)%2);
+
+        tArgs[i].gridSize = arguments.gridSize;
+        tArgs[i].numGenerations = arguments.numGenerations;
+        if(((arguments.numThreads-1) % 2) == 0)
+        {
+            tArgs[i].startRow = i*(arguments.gridSize/(arguments.numThreads-1));
+            tArgs[i].numOfRow = arguments.gridSize/(arguments.numThreads-1);
+            //printf("before Thread: startRow = %i, numOfRow = %i\n", tArgs[i].startRow, tArgs[i].numOfRow);
+            //fflush(stdout);
+            pthread_create(&threads[i], NULL, (void *)&workerThread, &tArgs[i]);
+        }
+        else
+        {
+           if(i != arguments.numThreads - 2)
+           {
+                tArgs[i].startRow = i*(arguments.gridSize/(arguments.numThreads-1));
+                tArgs[i].numOfRow = arguments.gridSize/(arguments.numThreads-1);
+                //printf("before Thread: startRow = %i, numOfRow = %i\n", tArgs[i].startRow, tArgs[i].numOfRow);
+                //fflush(stdout);
+                pthread_create(&threads[i], NULL, (void *)&workerThread, &tArgs[i]);
+           }
+           else
+           {
+                tArgs[i].startRow = i*(arguments.gridSize/(arguments.numThreads-1));
+                tArgs[i].numOfRow = arguments.gridSize/(arguments.numThreads-1) + arguments.gridSize%(arguments.numThreads-1);
+                //printf("before Thread: startRow = %i, numOfRow = %i\n", tArgs[i].startRow, tArgs[i].numOfRow);
+                //fflush(stdout);
+                pthread_create(&threads[i], NULL, (void *)&workerThread, &tArgs[i]);
+           }
+        }
+
 	}
 	
 	for(i = 0; i < arguments.numThreads-1; i++)
@@ -93,8 +124,8 @@ int main(int argc, char ** argv)
 
 
 
-	printf("before printing \n");
-	fflush(stdout);
+	//printf("before printing \n");
+	//fflush(stdout);
 	printGrid(&arguments, currGrid);
 
 
@@ -119,8 +150,8 @@ int main(int argc, char ** argv)
 void workerThread(void * arg)
 {
 	struct threadArgs * tArgs = (struct threadArgs*)arg;
-	printf("startRow = %i, numOfRow = %i\n", tArgs->startRow, tArgs->numOfRow);
-	fflush(stdout);
+	//printf("startRow = %i, numOfRow = %i\n", tArgs->startRow, tArgs->numOfRow);
+	//fflush(stdout);
 	char lastThread = 0;
 	while(generationsDone != tArgs->numGenerations)
 	{
@@ -137,14 +168,14 @@ void workerThread(void * arg)
 			}
 
 			pthread_mutex_lock(&mutex);
-			printf("cellsleft = %i\n", cellsLeft);
+			//printf("cellsleft = %i\n", cellsLeft);
 			cellsLeft -= counter;
-			printf("I removed %i cells.\n", counter);
+			//printf("I removed %i cells.\n", counter);
 			
 			if(cellsLeft == 0)
 			{
-				printf("I'm the last thread 1.\n");
-				fflush(stdout);
+				//printf("I'm the last thread 1.\n");
+				//fflush(stdout);
 
 				lastThread = 1;
 				cellsLeft = tArgs->gridSize*tArgs->gridSize;
@@ -170,16 +201,16 @@ void workerThread(void * arg)
 			} 
 			if(!lastThread)
 			{
-				printf("waiting\n");
-				fflush(stdout);
+				//printf("waiting\n");
+				//fflush(stdout);
 				pthread_cond_wait(&oneGenDone, &mutex);
-				printf("done waiting\n");
-				fflush(stdout);
+				//printf("done waiting\n");
+				//fflush(stdout);
 			}
 			else
 			{
-				printf("I'm the last thread.\n");
-				fflush(stdout);
+				//printf("I'm the last thread.\n");
+				//fflush(stdout);
 				lastThread = 0;
 			}
 			pthread_mutex_unlock(&mutex);

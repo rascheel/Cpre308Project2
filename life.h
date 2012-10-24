@@ -1,6 +1,6 @@
 #define DEFAULT_GRID_SIZE 8
-#define DEFAULT_NUM_THREADS 1
-#define DEFAULT_NUM_GENERATIONS 4
+#define DEFAULT_NUM_THREADS 2
+#define DEFAULT_NUM_GENERATIONS 1
 
 struct argsStruct
 {
@@ -14,15 +14,14 @@ struct argsStruct
 struct threadArgs
 {
     int gridSize;
+	int numGenerations;
     int startRow;
     int numOfRow;
-    int startCol;
-    int numOfCol;
 };
 
 struct argsStruct processArgs(int argc, char ** argv);
 
 void readInputFile(struct argsStruct * args, char ** inputArray);
 void printGrid(struct argsStruct * args, char ** arrayToPrint);
-char nextCell(struct argsStruct * args, int i, int j);
+char nextCell(int gridSize, int i, int j);
 void workerThread(void * arg);

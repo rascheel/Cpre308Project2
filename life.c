@@ -3,13 +3,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <pthread.h>
 #include "life.h"
 
 
 char ** currGrid;
 char ** nextGrid; 
-pthread_mutex_t cellMutes;
 int cellsLeft;
+int generationsDone;
+pthread_mutex_t mutex;
+pthread_cond_t oneGenDone;
 
 int main(int argc, char ** argv)
 {
@@ -41,6 +44,13 @@ int main(int argc, char ** argv)
 	}
 	readInputFile(&arguments, currGrid);
 
+	if(arguments.numThreads < 2)
+	{
+		printf("Not enough threads. Minimum is 2.");
+		abort();
+	}
+
+
 	nextGrid = malloc(arguments.gridSize*sizeof(char*));
 	if(nextGrid == NULL)
 	{
@@ -57,33 +67,34 @@ int main(int argc, char ** argv)
 		}
 	}
 
-    cellMutes = malloc(sizeof(pthread_mutex_t*)*arguments.gridSize);
-    if(cellMutes == NULL)
-    {
-        printf("Not enough memory");
-        abort();
-    }
-    for(i = 0; i < arguments.gridSize; i++)
-    {
-        cellMutes[i] = malloc(sizeof(pthread_mutex_t)*arguments.gridSize);
-        if(cellMutes[i] == NULL)
-        {
-            printf("Not enough memory");
-            abort();
-        }
-        pthread__mutex_init(&cellMutes[i], NULL);
-    }
-
-    threads = malloc(sizeof(pthread_t)*arguments.numThreads);
-    for(i = arguments.numThreads; i >= 0; i--)
-    {
-        struct threadArgs;
-        threadArgs.startRow = arguments.gridSize
-        pthread_create(
+    
 	cellsLeft = arguments.gridSize*arguments.gridSize;
+	generationsDone = 0;
+	pthread_mutex_init(&mutex, NULL);
+	pthread_cond_init(&oneGenDone, NULL);
+    struct threadArgs * tArgs = malloc(sizeof(struct threadArgs)*arguments.numThreads);
+    threads = malloc(sizeof(pthread_t)*arguments.numThreads-1);
+    for(i = 0; i < arguments.numThreads-1; i++)
+    {
+		tArgs[i].gridSize = arguments.gridSize;
+		tArgs[i].numGenerations = arguments.numGenerations;
+        tArgs[i].startRow = i*(arguments.gridSize/(arguments.numThreads-1));
+		tArgs[i].numOfRow = arguments.gridSize/(arguments.numThreads-1);
+		printf("before Thread: startRow = %i, numOfRow = %i\n", tArgs[i].startRow, tArgs[i].numOfRow);
+		fflush(stdout);
+        pthread_create(&threads[i], NULL, (void *)&workerThread, &tArgs[i]);
+	}
+	
+	for(i = 0; i < arguments.numThreads-1; i++)
+	{
+		pthread_join(threads[i], NULL);
+	}
 
 
 
+
+	printf("before printing \n");
+	fflush(stdout);
 	printGrid(&arguments, currGrid);
 
 
@@ -105,13 +116,84 @@ int main(int argc, char ** argv)
 	return 0;
 }
 
-char nextCell(struct argsStruct * args, int row, int col)
+void workerThread(void * arg)
+{
+	struct threadArgs * tArgs = (struct threadArgs*)arg;
+	printf("startRow = %i, numOfRow = %i\n", tArgs->startRow, tArgs->numOfRow);
+	fflush(stdout);
+	char lastThread = 0;
+	while(generationsDone != tArgs->numGenerations)
+	{
+			int i;
+			int j;
+			int counter = 0;
+			for(i = tArgs->startRow; i < tArgs->numOfRow+tArgs->startRow; i++)
+			{
+				for(j = 0; j < tArgs->gridSize; j++)
+				{
+					counter++;
+					nextGrid[i][j] = nextCell(tArgs->gridSize, i, j);
+				}
+			}
+
+			pthread_mutex_lock(&mutex);
+			printf("cellsleft = %i\n", cellsLeft);
+			cellsLeft -= counter;
+			printf("I removed %i cells.\n", counter);
+			
+			if(cellsLeft == 0)
+			{
+				printf("I'm the last thread 1.\n");
+				fflush(stdout);
+
+				lastThread = 1;
+				cellsLeft = tArgs->gridSize*tArgs->gridSize;
+				free(currGrid);
+				currGrid = nextGrid;
+				nextGrid = malloc(tArgs->gridSize*sizeof(char*));
+				if(nextGrid == NULL)
+				{
+					printf("Not enough memory");
+					abort();
+				}
+				for(i = 0; i < tArgs->gridSize; i++)
+				{
+					nextGrid[i] = malloc(tArgs->gridSize*sizeof(char));
+					if(nextGrid[i] == NULL)
+					{
+						printf("Not enough memory!");
+						abort();
+					}
+				}				
+				generationsDone++;
+				pthread_cond_broadcast(&oneGenDone);
+			} 
+			if(!lastThread)
+			{
+				printf("waiting\n");
+				fflush(stdout);
+				pthread_cond_wait(&oneGenDone, &mutex);
+				printf("done waiting\n");
+				fflush(stdout);
+			}
+			else
+			{
+				printf("I'm the last thread.\n");
+				fflush(stdout);
+				lastThread = 0;
+			}
+			pthread_mutex_unlock(&mutex);
+	}
+}
+
+
+char nextCell(int gridSize, int row, int col)
 {
 
 	int numOfNeighbors = 0;
-	if(row != 0 && row != args->gridSize-1)
+	if(row != 0 && row != gridSize-1)
 	{
-		if(col != 0 && col != args->gridSize-1)//Normal tile with 8 neighbors
+		if(col != 0 && col != gridSize-1)//Normal tile with 8 neighbors
 		{
 			if(currGrid[row-1][col-1] == '1') numOfNeighbors++;
 			if(currGrid[row-1][col] == '1') numOfNeighbors++;
@@ -130,7 +212,7 @@ char nextCell(struct argsStruct * args, int row, int col)
 			if(currGrid[row+1][col] == '1') numOfNeighbors++;
 			if(currGrid[row+1][col+1] == '1') numOfNeighbors++;
 		}
-		else if(col == args->gridSize-1)//tile on right border of grid
+		else if(col == gridSize-1)//tile on right border of grid
 		{
 			if(currGrid[row-1][col] == '1') numOfNeighbors++;
 			if(currGrid[row-1][col-1] == '1') numOfNeighbors++;
@@ -139,7 +221,7 @@ char nextCell(struct argsStruct * args, int row, int col)
 			if(currGrid[row+1][col-1] == '1') numOfNeighbors++;
 		}
 	}
-	else if(col != 0 && col != args->gridSize-1)
+	else if(col != 0 && col != gridSize-1)
 	{
 		if(row == 0)//tile on top border of grid
 		{
@@ -149,7 +231,7 @@ char nextCell(struct argsStruct * args, int row, int col)
 			if(currGrid[row+1][col] == '1') numOfNeighbors++;
 			if(currGrid[row+1][col+1] == '1') numOfNeighbors++;
 		}
-		else if(row == args->gridSize-1)//tile on bottom border of grid
+		else if(row == gridSize-1)//tile on bottom border of grid
 		{
 			if(currGrid[row][col-1] == '1') numOfNeighbors++;
 			if(currGrid[row][col+1] == '1') numOfNeighbors++;
@@ -166,13 +248,13 @@ char nextCell(struct argsStruct * args, int row, int col)
 			if(currGrid[row+1][col] == '1') numOfNeighbors++;
 			if(currGrid[row+1][col+1] == '1') numOfNeighbors++;
 		}
-		else if(row == args->gridSize-1 && col == args->gridSize-1)//bottom right corner
+		else if(row == gridSize-1 && col == gridSize-1)//bottom right corner
 		{
 			if(currGrid[row][col-1] == '1') numOfNeighbors++;
 			if(currGrid[row-1][col] == '1') numOfNeighbors++;
 			if(currGrid[row-1][col-1] == '1') numOfNeighbors++;
 		}
-		else if(row == args->gridSize-1) //bottom left corner
+		else if(row == gridSize-1) //bottom left corner
 		{
 			if(currGrid[row][col+1] == '1') numOfNeighbors++;
 			if(currGrid[row-1][col] == '1') numOfNeighbors++;
